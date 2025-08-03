@@ -21,15 +21,11 @@ from pathlib import Path
 project_root = Path(__file__).parents[3]  # Go up from app/db/migrations/ to project root
 sys.path.insert(0, str(project_root))
 
-# Import the metadata object from our base model
-from app.models.base import Base
-
-# Import all models to ensure they are registered with the metadata
-from app.models.user import User  # noqa
-# TODO: Import additional models as they are created
-# from app.models.academy import *  # noqa
-# from app.models.finance import *  # noqa
-# from app.models.invest import *  # noqa
+# Import the metadata object and all models from our base module
+from app.models.base import (
+    Base, User, Course, Lesson, Enrollment, 
+    Transaction, Budget, Investment, Watchlist
+)  # noqa
 
 target_metadata = Base.metadata
 

@@ -10,6 +10,8 @@ from app.db.base_class import Base
 # Import for type checking to avoid circular imports
 if TYPE_CHECKING:
     from app.models.academy import Course, Enrollment
+    from app.models.finance import Transaction, Budget
+    from app.models.invest import Investment, Watchlist
 
 
 class User(Base):
@@ -87,6 +89,36 @@ class User(Base):
         foreign_keys="Enrollment.user_id",
         back_populates="user",
         doc="Course enrollments for this user"
+    )
+    
+    # Finance relationships
+    transactions: Mapped[List["Transaction"]] = relationship(
+        "Transaction",
+        foreign_keys="Transaction.user_id",
+        back_populates="user",
+        doc="Financial transactions for this user"
+    )
+    
+    budgets: Mapped[List["Budget"]] = relationship(
+        "Budget",
+        foreign_keys="Budget.user_id",
+        back_populates="user",
+        doc="Budget records for this user"
+    )
+    
+    # Investment relationships
+    investments: Mapped[List["Investment"]] = relationship(
+        "Investment",
+        foreign_keys="Investment.user_id",
+        back_populates="user",
+        doc="Investment portfolio for this user"
+    )
+    
+    watchlists: Mapped[List["Watchlist"]] = relationship(
+        "Watchlist",
+        foreign_keys="Watchlist.user_id",
+        back_populates="user",
+        doc="Watchlist items for this user"
     )
     
     def __repr__(self) -> str:
