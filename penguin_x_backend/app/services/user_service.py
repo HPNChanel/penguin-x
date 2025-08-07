@@ -2,6 +2,7 @@ from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.orm import selectinload
+from uuid import UUID
 
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
@@ -15,27 +16,24 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
     def __init__(self):
         super().__init__(User)
     
-    async def create_user(
-        self, 
-        db: AsyncSession, 
-        *, 
-        user_in: UserCreate
-    ) -> User:
-        """
-        Create a new user with hashed password.
+    # Requested functions using SQLAlchemy 2.0 async
+    async def get_all_users(self, db: AsyncSession) -> list[User]:
+        """Get all users from the database."""
+        result = await db.execute(select(User))
+        return list(result.scalars().all())
+    
+    async def get_user_by_id(self, db: AsyncSession, user_id: UUID) -> User | None:
+        """Get user by UUID."""
+        result = await db.execute(select(User).where(User.id == str(user_id)))
+        return result.scalar_one_or_none()
+    
+    async def create_user(self, db: AsyncSession, user_data: UserCreate) -> User:
+        """Create a new user with hashed password."""
+        hashed_password = get_password_hash(user_data.password)
+        user_dict = user_data.model_dump(exclude={"password"})
+        user_dict["hashed_password"] = hashed_password
         
-        Args:
-            db: Database session
-            user_in: User creation data
-            
-        Returns:
-            User: Created user instance
-        """
-        hashed_password = get_password_hash(user_in.password)
-        user_data = user_in.model_dump(exclude={"password"})
-        user_data["hashed_password"] = hashed_password
-        
-        db_user = User(**user_data)
+        db_user = User(**user_dict)
         db.add(db_user)
         await db.commit()
         await db.refresh(db_user)
@@ -59,9 +57,10 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         *, 
         username: str
     ) -> Optional[User]:
-        """Get user by username."""
+        """Get user by username (using email as username)."""
+        # Since User model doesn't have username field, treat email as username
         result = await db.execute(
-            select(User).where(User.username == username)
+            select(User).where(User.email == username)
         )
         return result.scalar_one_or_none()
     
@@ -69,9 +68,9 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         self,
         db: AsyncSession,
         *,
-        user_id: int
+        user_id: str
     ) -> Optional[User]:
-        """Get user by ID."""
+        """Get user by UUID string."""
         result = await db.execute(
             select(User).where(User.id == user_id)
         )
@@ -141,20 +140,9 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         return user.is_superuser
     
     async def is_verified(self, user: User) -> bool:
-        """Check if user email is verified."""
-        return user.is_verified
-    
-    async def verify_user(
-        self,
-        db: AsyncSession,
-        *,
-        user: User
-    ) -> User:
-        """Mark user as verified."""
-        user.is_verified = True
-        await db.commit()
-        await db.refresh(user)
-        return user
+        """Check if user email is verified (always True as model doesn't have this field)."""
+        # User model doesn't have is_verified field, so return True
+        return True
     
     async def deactivate_user(
         self,
@@ -189,7 +177,7 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         limit: int = 100
     ) -> List[User]:
         """
-        Search users by username, email, or name.
+        Search users by email or full name.
         
         Args:
             db: Database session
@@ -204,14 +192,12 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         result = await db.execute(
             select(User).where(
                 or_(
-                    User.username.ilike(search_term),
                     User.email.ilike(search_term),
-                    User.first_name.ilike(search_term),
-                    User.last_name.ilike(search_term)
+                    User.full_name.ilike(search_term)
                 )
             ).offset(skip).limit(limit)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
     
     async def get_active_users(
         self,
@@ -240,9 +226,9 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         return result.scalar()
     
     async def count_verified_users(self, db: AsyncSession) -> int:
-        """Count number of verified users."""
+        """Count number of verified users (same as total users since verification field doesn't exist)."""
         result = await db.execute(
-            select(func.count(User.id)).where(User.is_verified == True)
+            select(func.count(User.id))
         )
         return result.scalar()
     
@@ -254,9 +240,9 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         return result.scalar() > 0
     
     async def exists_by_username(self, db: AsyncSession, *, username: str) -> bool:
-        """Check if user exists by username."""
+        """Check if user exists by username (using email)."""
         result = await db.execute(
-            select(func.count(User.id)).where(User.username == username)
+            select(func.count(User.id)).where(User.email == username)
         )
         return result.scalar() > 0
 

@@ -4,7 +4,7 @@ import uvicorn
 
 from app.core.config import settings
 from app.db.session import engine
-from app.api.v1 import api_router
+from app.api.v1 import user, academy, finance, invest
 
 
 def create_application() -> FastAPI:
@@ -28,11 +28,11 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
     
-    # Include API router with modular domain routing
-    app.include_router(
-        api_router,
-        prefix=settings.API_V1_STR
-    )
+    # Include API routers with modular domain routing
+    app.include_router(user.router, prefix="/api/v1", tags=["User"])
+    app.include_router(academy.router, prefix="/api/v1", tags=["Academy"])
+    app.include_router(finance.router, prefix="/api/v1", tags=["Finance"])
+    app.include_router(invest.router, prefix="/api/v1", tags=["Invest"])
     
     # Health check endpoint
     @app.get("/healthcheck")

@@ -3,13 +3,16 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 from datetime import datetime
 from uuid import UUID
 
+from app.core.roles import Role
+
 
 class UserBase(BaseModel):
     """Base user schema with common fields."""
     email: EmailStr
     full_name: Optional[str] = None
     is_active: bool = True
-    is_superuser: bool = False
+    is_superuser: bool = False  # Deprecated - use role instead
+    role: Role = Role.USER
 
 
 class UserCreate(UserBase):
@@ -43,7 +46,8 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     is_active: Optional[bool] = None
-    is_superuser: Optional[bool] = None
+    is_superuser: Optional[bool] = None  # Deprecated - use role instead
+    role: Optional[Role] = None
 
 
 class UserRead(UserBase):

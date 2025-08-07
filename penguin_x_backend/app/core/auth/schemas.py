@@ -14,7 +14,7 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     """Token data for internal use."""
     username: Optional[str] = None
-    user_id: Optional[int] = None
+    user_id: Optional[str] = None  # Changed to string for UUID compatibility
     scopes: List[str] = []
 
 
@@ -63,7 +63,7 @@ class PasswordResetConfirm(BaseModel):
 class TokenBlacklistEntry(BaseModel):
     """Token blacklist entry schema."""
     token_jti: str  # JWT ID
-    user_id: int
+    user_id: str  # Changed to string for UUID compatibility
     expires_at: datetime
     created_at: datetime
 

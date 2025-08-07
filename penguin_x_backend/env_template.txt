@@ -2,8 +2,9 @@
 DATABASE_URL=mysql+asyncmy://username:password@localhost:3306/penguin_x_db
 DATABASE_ECHO=False
 
-# Security
-SECRET_KEY=your-secret-key-here
+# Security & JWT Authentication
+SECRET_KEY=your-super-secret-key-that-should-be-very-long-and-random-in-production
+JWT_SECRET_KEY=your-super-secret-jwt-key-that-should-be-very-long-and-random-in-production
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 

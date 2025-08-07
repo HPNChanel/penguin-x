@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, func
+from sqlalchemy import Column, String, Boolean, DateTime, func, Enum as SQLEnum
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from uuid import uuid4
@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import List, TYPE_CHECKING
 
 from app.db.base_class import Base
+from app.core.roles import Role
 
 # Import for type checking to avoid circular imports
 if TYPE_CHECKING:
@@ -65,7 +66,15 @@ class User(Base):
         Boolean,
         default=False,
         nullable=False,
-        doc="Whether the user has superuser privileges"
+        doc="Whether the user has superuser privileges (deprecated - use role instead)"
+    )
+    
+    # Role-based access control
+    role: Mapped[Role] = mapped_column(
+        SQLEnum(Role),
+        default=Role.USER,
+        nullable=False,
+        doc="User's role for role-based access control"
     )
     
     # Timestamp with auto-now

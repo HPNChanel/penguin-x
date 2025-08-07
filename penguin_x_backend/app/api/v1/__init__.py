@@ -2,6 +2,9 @@ from fastapi import APIRouter
 
 from .user import router as user_router
 from .auth import router as auth_router
+from .academy import router as academy_router
+from .finance import router as finance_router
+from .invest import router as invest_router
 
 # Create main API router for v1
 api_router = APIRouter()
@@ -20,25 +23,23 @@ api_router.include_router(
     tags=["users"]
 )
 
-# TODO: Include other domain routes when implemented
-# from .academy import router as academy_router
-# from .finance import router as finance_router
-# from .invest import router as invest_router
+# Include academy routes
+api_router.include_router(
+    academy_router,
+    prefix="/academy",
+    tags=["academy"]
+)
 
-# api_router.include_router(
-#     academy_router,
-#     prefix="/academy",
-#     tags=["academy"]
-# )
+# Include finance routes
+api_router.include_router(
+    finance_router,
+    prefix="/finance",
+    tags=["finance"]
+)
 
-# api_router.include_router(
-#     finance_router,
-#     prefix="/finance",
-#     tags=["finance"]
-# )
-
-# api_router.include_router(
-#     invest_router,
-#     prefix="/invest",
-#     tags=["investment"]
-# )
+# Include investment routes
+api_router.include_router(
+    invest_router,
+    prefix="/invest",
+    tags=["investment"]
+)

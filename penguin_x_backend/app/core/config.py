@@ -17,8 +17,16 @@ class Settings(BaseSettings):
     
     # Security Settings
     SECRET_KEY: str
+    JWT_SECRET_KEY: Optional[str] = None  # Will default to SECRET_KEY if not provided
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    @validator("JWT_SECRET_KEY", pre=True, always=True)
+    def set_jwt_secret_key(cls, v, values):
+        """Use SECRET_KEY if JWT_SECRET_KEY is not provided."""
+        if v is None:
+            return values.get("SECRET_KEY")
+        return v
     
     # Environment Settings
     ENVIRONMENT: str = "development"

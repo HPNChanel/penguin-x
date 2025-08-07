@@ -1,132 +1,246 @@
-from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
+"""
+Authentication router for FastAPI application.
 
+This module provides authentication endpoints including user registration,
+login, and current user information retrieval.
+"""
+
+from datetime import timedelta
+from typing import Any, Dict
+from fastapi import APIRouter, Depends, HTTPException, status, Body
+from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, EmailStr
+
+# Database and dependencies
 from app.db.session import get_db
-from app.core.auth.security import create_access_token, create_refresh_token, verify_refresh_token
-from app.core.auth.schemas import Token, LoginResponse, RefreshTokenRequest
-from app.core.auth.dependencies import get_current_active_user
-from app.schemas.user import UserRegister, UserResponse, UserCreate
+from app.core.auth.dependencies import get_current_user
+
+# Authentication functions
+from app.core.auth.security import get_password_hash
+from app.core.auth.jwt import create_access_token, create_refresh_token
+
+# Schemas
+from app.schemas.user import UserCreate, UserRead
+from app.core.auth.schemas import LoginResponse, Token
+
+# Services
 from app.services.user_service import user_service
+
+# Configuration
 from app.core.config import settings
 
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+class LoginRequest(BaseModel):
+    """Login request schema."""
+    email: EmailStr
+    password: str
+
+
+class RefreshTokenRequest(BaseModel):
+    """Refresh token request schema."""
+    refresh_token: str
+
+
+@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register(
-    user_in: UserRegister,
+    user_in: UserCreate,
     db: AsyncSession = Depends(get_db)
-):
+) -> UserRead:
     """
     Register a new user.
     
+    This endpoint accepts user registration data, hashes the password securely,
+    and saves the user to the database.
+    
     Args:
-        user_in: User registration data
-        db: Database session
+        user_in: User registration data including email, password, etc.
+        db: Database session dependency
         
     Returns:
-        UserResponse: Created user information
+        UserRead: Created user information (without password)
         
     Raises:
-        HTTPException: If email or username already exists
+        HTTPException: 400 if email already exists
+        
+    Example:
+        ```json
+        POST /auth/register
+        {
+            "email": "user@example.com",
+            "password": "SecurePassword123!",
+            "full_name": "John Doe"
+        }
+        ```
     """
-    # Check if user already exists
+    # Check if user already exists by email
     if await user_service.exists_by_email(db, email=user_in.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            detail="A user with this email already exists"
         )
     
-    if await user_service.exists_by_username(db, username=user_in.username):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already taken"
-        )
+    # Create user with hashed password
+    user = await user_service.create_user(db, user_data=user_in)
     
-    # Create user
-    user_create_data = user_in.model_dump(exclude={"confirm_password", "terms_accepted"})
-    user_create = UserCreate(**user_create_data)
-    
-    user = await user_service.create_user(db, user_in=user_create)
-    return UserResponse.model_validate(user)
+    # Return user data without password
+    return UserRead.model_validate(user)
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/login", response_model=Dict[str, Any])
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    login_data: LoginRequest,
     db: AsyncSession = Depends(get_db)
-):
+) -> Dict[str, Any]:
     """
     User login endpoint.
     
+    This endpoint accepts email and password, verifies the credentials,
+    and returns an access token for authentication.
+    
     Args:
-        form_data: OAuth2 form data with username and password
-        db: Database session
+        login_data: Login request containing email and password
+        db: Database session dependency
         
     Returns:
-        LoginResponse: Access token and user information
+        dict: Access token and user information
         
     Raises:
-        HTTPException: If credentials are invalid or user is inactive
+        HTTPException: 401 if credentials are invalid
+        HTTPException: 400 if user account is inactive
+        
+    Example:
+        ```json
+        POST /auth/login
+        {
+            "email": "user@example.com",
+            "password": "SecurePassword123!"
+        }
+        ```
+        
+        Response:
+        ```json
+        {
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+            "token_type": "bearer",
+            "expires_in": 1800,
+            "user": {
+                "id": "uuid-string",
+                "email": "user@example.com",
+                "full_name": "John Doe"
+            }
+        }
+        ```
     """
+    # Authenticate user
     user = await user_service.authenticate(
         db, 
-        username=form_data.username, 
-        password=form_data.password
+        username=login_data.email,  # Use email as username
+        password=login_data.password
     )
     
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    if not await user_service.is_active(user):
+    # Check if user account is active
+    if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
+            detail="User account is inactive"
         )
     
-    # Create tokens
+    # Create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        subject=user.username,
-        user_id=user.id,
+        data={
+            "sub": user.email,
+            "user_id": user.id,
+            "role": user.role.value  # Include role in JWT payload
+        },
         expires_delta=access_token_expires
     )
     
+    # Create refresh token
     refresh_token = create_refresh_token(user_id=user.id)
     
-    return LoginResponse(
-        access_token=access_token,
-        token_type="bearer",
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
-        refresh_token=refresh_token,
-        user=UserResponse.model_validate(user).model_dump()
-    )
+    # Return token and user information
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
+        "refresh_token": refresh_token,
+        "user": UserRead.model_validate(user).model_dump()
+    }
 
+
+@router.get("/me", response_model=UserRead)
+async def get_current_user_info(
+    current_user = Depends(get_current_user)
+) -> UserRead:
+    """
+    Get current user information from JWT token.
+    
+    This endpoint extracts the JWT token from the Authorization header,
+    validates it, and returns the current user's information.
+    
+    Args:
+        current_user: Current authenticated user from JWT token
+        
+    Returns:
+        UserRead: Current user information
+        
+    Raises:
+        HTTPException: 401 if token is invalid or expired
+        HTTPException: 400 if user account is inactive
+        
+    Example:
+        ```
+        GET /auth/me
+        Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...
+        ```
+        
+        Response:
+        ```json
+        {
+            "id": "uuid-string",
+            "email": "user@example.com", 
+            "full_name": "John Doe",
+            "is_active": true,
+            "is_superuser": false,
+            "created_at": "2024-01-01T00:00:00Z"
+        }
+        ```
+    """
+    return UserRead.model_validate(current_user)
+
+
+# Optional: Additional auth endpoints for completeness
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(
+async def refresh_access_token(
     refresh_data: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
-):
+) -> Token:
     """
     Refresh access token using refresh token.
     
     Args:
-        refresh_data: Refresh token request
-        db: Database session
+        refresh_data: Refresh token request data
+        db: Database session dependency
         
     Returns:
         Token: New access token
         
     Raises:
-        HTTPException: If refresh token is invalid
+        HTTPException: 401 if refresh token is invalid
     """
+    from app.core.auth.jwt import verify_refresh_token
+    
     user_id = verify_refresh_token(refresh_data.refresh_token)
     if not user_id:
         raise HTTPException(
@@ -135,16 +249,16 @@ async def refresh_token(
         )
     
     user = await user_service.get_by_id(db, user_id=user_id)
-    if not user or not await user_service.is_active(user):
+    if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive"
         )
     
+    # Create new access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        subject=user.username,
-        user_id=user.id,
+        data={"sub": user.email, "user_id": user.id},
         expires_delta=access_token_expires
     )
     
@@ -155,28 +269,12 @@ async def refresh_token(
     )
 
 
-@router.get("/me", response_model=UserResponse)
-async def read_users_me(
-    current_user = Depends(get_current_active_user)
-):
-    """
-    Get current user information.
-    
-    Args:
-        current_user: Current authenticated user
-        
-    Returns:
-        UserResponse: Current user information
-    """
-    return UserResponse.model_validate(current_user)
-
-
 @router.post("/logout")
-async def logout():
+async def logout() -> Dict[str, str]:
     """
-    Logout endpoint (placeholder).
+    Logout endpoint.
     
-    In a real implementation, this would:
+    In a production implementation, this would typically:
     1. Blacklist the refresh token
     2. Optionally blacklist the access token
     3. Clear any server-side session data
@@ -184,56 +282,4 @@ async def logout():
     Returns:
         dict: Success message
     """
-    # TODO: Implement token blacklisting
     return {"message": "Successfully logged out"}
-
-
-@router.post("/verify-email")
-async def verify_email():
-    """
-    Email verification endpoint (placeholder).
-    
-    This would typically:
-    1. Accept a verification token
-    2. Verify the token and mark user as verified
-    3. Return success/failure response
-    
-    Returns:
-        dict: Placeholder response
-    """
-    # TODO: Implement email verification
-    return {"message": "Email verification endpoint - to be implemented"}
-
-
-@router.post("/forgot-password")
-async def forgot_password():
-    """
-    Forgot password endpoint (placeholder).
-    
-    This would typically:
-    1. Accept an email address
-    2. Generate a password reset token
-    3. Send reset email to user
-    
-    Returns:
-        dict: Placeholder response
-    """
-    # TODO: Implement password reset
-    return {"message": "Password reset endpoint - to be implemented"}
-
-
-@router.post("/reset-password")
-async def reset_password():
-    """
-    Reset password endpoint (placeholder).
-    
-    This would typically:
-    1. Accept a reset token and new password
-    2. Verify the token
-    3. Update user's password
-    
-    Returns:
-        dict: Placeholder response
-    """
-    # TODO: Implement password reset confirmation
-    return {"message": "Password reset confirmation endpoint - to be implemented"}
