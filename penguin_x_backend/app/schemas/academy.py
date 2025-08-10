@@ -5,10 +5,13 @@ This module contains schemas for Course, Lesson, and Enrollment models
 with proper validation and serialization support.
 """
 
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING, ForwardRef
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from uuid import UUID
+
+if TYPE_CHECKING:
+    pass
 
 
 class CourseBase(BaseModel):
@@ -29,7 +32,6 @@ class CourseRead(CourseBase):
     id: UUID
     created_by: UUID
     created_at: datetime
-    lessons: Optional[List["LessonRead"]] = Field(default=None, description="Course lessons")
 
 
 class LessonBase(BaseModel):
@@ -72,5 +74,5 @@ class EnrollmentRead(EnrollmentBase):
     enrolled_at: datetime
 
 
-# Update forward references for CourseRead
-CourseRead.model_rebuild()
+# Removed CourseWithLessons to prevent circular reference issues
+# Use explicit queries in services when nested relationships are needed

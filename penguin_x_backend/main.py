@@ -4,7 +4,7 @@ import uvicorn
 
 from app.core.config import settings
 from app.db.session import engine
-from app.api.v1 import user, academy, finance, invest
+from app.api.v1 import user, auth, academy, finance, invest
 
 
 def create_application() -> FastAPI:
@@ -24,15 +24,17 @@ def create_application() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         allow_headers=["*"],
+        expose_headers=["*"],
     )
     
     # Include API routers with modular domain routing
-    app.include_router(user.router, prefix="/api/v1", tags=["User"])
-    app.include_router(academy.router, prefix="/api/v1", tags=["Academy"])
-    app.include_router(finance.router, prefix="/api/v1", tags=["Finance"])
-    app.include_router(invest.router, prefix="/api/v1", tags=["Invest"])
+    app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
+    app.include_router(user.router, prefix="/api/v1/users", tags=["User"])
+    app.include_router(academy.router, prefix="/api/v1/academy", tags=["Academy"])
+    app.include_router(finance.router, prefix="/api/v1/finance", tags=["Finance"])
+    app.include_router(invest.router, prefix="/api/v1/invest", tags=["Invest"])
     
     # Health check endpoint
     @app.get("/healthcheck")

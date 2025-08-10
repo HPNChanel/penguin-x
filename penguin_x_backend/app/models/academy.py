@@ -72,6 +72,7 @@ class Course(Base):
         "Lesson",
         back_populates="course",
         cascade="all, delete-orphan",
+        lazy="noload",
         doc="Lessons belonging to this course"
     )
     
@@ -79,13 +80,15 @@ class Course(Base):
         "Enrollment",
         back_populates="course",
         cascade="all, delete-orphan",
+        lazy="noload",
         doc="Enrollments for this course"
     )
     
-    # Relationship to User (creator)
+    # Relationship to User (creator) - one-way to prevent circular references
     creator: Mapped["User"] = relationship(
         "User",
         foreign_keys=[created_by],
+        lazy="noload",
         doc="User who created this course"
     )
     
@@ -150,6 +153,7 @@ class Lesson(Base):
     course: Mapped["Course"] = relationship(
         "Course",
         back_populates="lessons",
+        lazy="noload",
         doc="Course this lesson belongs to"
     )
     
@@ -197,16 +201,18 @@ class Enrollment(Base):
         doc="Timestamp when the user enrolled"
     )
     
-    # Relationships
+    # Relationships - one-way to prevent circular references
     user: Mapped["User"] = relationship(
         "User",
         foreign_keys=[user_id],
+        lazy="noload",
         doc="User who enrolled"
     )
     
     course: Mapped["Course"] = relationship(
         "Course",
         back_populates="enrollments",
+        lazy="noload",
         doc="Course that was enrolled in"
     )
     

@@ -247,5 +247,12 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         return result.scalar() > 0
 
 
-# Create service instance
-user_service = UserService()
+# Service instance will be created lazily to avoid circular imports
+_user_service_instance = None
+
+def get_user_service() -> UserService:
+    """Get user service instance (lazy initialization)."""
+    global _user_service_instance
+    if _user_service_instance is None:
+        _user_service_instance = UserService()
+    return _user_service_instance

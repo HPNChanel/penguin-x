@@ -1,7 +1,10 @@
 from .base import (
-    Base, TimestampMixin, BaseModel, SoftDeleteMixin, AuditMixin, VersionMixin,
-    User, Course, Lesson, Enrollment, Transaction, Budget, Investment, Watchlist
+    Base, TimestampMixin, BaseModel, SoftDeleteMixin, AuditMixin, VersionMixin
 )
+from .user import User
+from .academy import Course, Lesson, Enrollment
+from .finance import Transaction, Budget
+from .invest import Investment, Watchlist
 
 __all__ = [
     # Base classes and mixins

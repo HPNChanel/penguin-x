@@ -24,7 +24,7 @@ from app.schemas.user import UserCreate, UserRead
 from app.core.auth.schemas import LoginResponse, Token
 
 # Services
-from app.services.user_service import user_service
+from app.services.user_service import get_user_service
 
 # Configuration
 from app.core.config import settings
@@ -75,14 +75,14 @@ async def register(
         ```
     """
     # Check if user already exists by email
-    if await user_service.exists_by_email(db, email=user_in.email):
+    if await get_user_service().exists_by_email(db, email=user_in.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="A user with this email already exists"
         )
     
     # Create user with hashed password
-    user = await user_service.create_user(db, user_data=user_in)
+    user = await get_user_service().create_user(db, user_data=user_in)
     
     # Return user data without password
     return UserRead.model_validate(user)
@@ -134,7 +134,7 @@ async def login(
         ```
     """
     # Authenticate user
-    user = await user_service.authenticate(
+    user = await get_user_service().authenticate(
         db, 
         username=login_data.email,  # Use email as username
         password=login_data.password
@@ -248,7 +248,7 @@ async def refresh_access_token(
             detail="Invalid refresh token"
         )
     
-    user = await user_service.get_by_id(db, user_id=user_id)
+    user = await get_user_service().get_by_id(db, user_id=user_id)
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

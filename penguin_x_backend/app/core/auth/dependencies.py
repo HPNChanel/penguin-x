@@ -76,7 +76,8 @@ async def get_current_user(
     
     # Get user from database using UUID string
     # Import user_service here to avoid circular imports
-    from app.services.user_service import user_service
+    from app.services.user_service import get_user_service
+    user_service = get_user_service()
     
     try:
         # Use get_user_by_id which handles UUID conversion
@@ -198,7 +199,8 @@ async def get_optional_current_user(
         # Reuse the main authentication logic but catch exceptions
         # We need to call get_current_user with proper dependency injection
         # For this optional case, we'll duplicate the core logic to avoid dependency issues
-        from app.services.user_service import user_service
+        from app.services.user_service import get_user_service
+        user_service = get_user_service()
         
         # Decode JWT token
         payload = decode_access_token(token)

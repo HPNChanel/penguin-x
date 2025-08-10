@@ -6,7 +6,7 @@ from uuid import UUID
 from app.api.deps import get_db
 from app.core.auth.permissions import get_current_active_user, get_current_active_superuser
 from app.models.user import User
-from app.services.user_service import user_service
+from app.services.user_service import get_user_service
 from app.schemas.user import UserCreate, UserRead
 
 router = APIRouter()
@@ -28,7 +28,7 @@ async def get_users(
         List[UserRead]: List of users
     """
     # Get all users using the service function
-    users = await user_service.get_all_users(db)
+    users = await get_user_service().get_all_users(db)
     return [UserRead.model_validate(user) for user in users]
 
 
@@ -53,7 +53,7 @@ async def create_user(
         HTTPException: If user creation fails
     """
     try:
-        user = await user_service.create_user(db, user_create)
+        user = await get_user_service().create_user(db, user_create)
         return UserRead.model_validate(user)
     except Exception as e:
         raise HTTPException(
@@ -82,7 +82,7 @@ async def get_user_by_id(
     Raises:
         HTTPException: If user not found
     """
-    user = await user_service.get_user_by_id(db, user_id)
+    user = await get_user_service().get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

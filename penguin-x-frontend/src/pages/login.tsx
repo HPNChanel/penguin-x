@@ -1,19 +1,52 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useUser } from "@/store/app-store"
+import { authAPI } from "@/lib/api"
+import { toast } from "sonner"
 
 export function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
+  const { setUser } = useUser()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle login logic here
-    console.log("Login attempt:", { email, password })
+    setIsLoading(true)
+    
+    try {
+      const response = await authAPI.login({ email, password })
+      
+      // Convert backend user format to frontend format
+      const nameParts = response.user.full_name?.split(' ') || ['', '']
+      const firstName = nameParts[0] || ''
+      const lastName = nameParts.slice(1).join(' ') || ''
+      
+      const user = {
+        id: response.user.id,
+        email: response.user.email,
+        firstName: firstName,
+        lastName: lastName,
+        avatar: response.user.avatar_url,
+        role: response.user.role || "user"
+      }
+      
+      setUser(user)
+      toast.success("Login successful!")
+      navigate("/dashboard")
+    } catch (error: any) {
+      console.error("Login failed:", error)
+      const message = error.response?.data?.detail || "Login failed. Please try again."
+      toast.error(message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -61,8 +94,8 @@ export function LoginPage() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full">
-                Sign In
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
             

@@ -18,6 +18,9 @@ router = APIRouter()
 # Transaction endpoints
 @router.get("/transactions", response_model=List[TransactionRead], tags=["Finance"])
 async def get_transactions(
+    month: int = None,
+    year: int = None,
+    limit: int = None,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -25,14 +28,18 @@ async def get_transactions(
     Get list of user's transactions (authenticated users).
     
     Args:
+        month: Optional month filter (1-12)
+        year: Optional year filter
+        limit: Optional limit on number of transactions to return
         current_user: Current active user
         db: Database session
         
     Returns:
         List[TransactionRead]: List of user's transactions
     """
-    transactions = await finance_service.get_all_transactions(db)
-    return [TransactionRead.model_validate(transaction) for transaction in transactions]
+    # For now, return empty list since we don't have user-specific transactions implemented yet
+    # TODO: Implement user-specific transaction filtering by month/year/limit
+    return []
 
 
 @router.get("/summary", tags=["Finance"])

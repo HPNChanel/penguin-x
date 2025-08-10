@@ -92,10 +92,11 @@ class Investment(Base):
         doc="Additional notes about the investment"
     )
     
-    # Relationships
+    # Relationships - one-way to prevent circular references
     user: Mapped["User"] = relationship(
         "User",
         foreign_keys=[user_id],
+        lazy="noload",
         doc="User who owns this investment"
     )
     
@@ -150,10 +151,11 @@ class Watchlist(Base):
         doc="Timestamp when the asset was added to watchlist"
     )
     
-    # Relationships
+    # Relationships - one-way to prevent circular references
     user: Mapped["User"] = relationship(
         "User",
         foreign_keys=[user_id],
+        lazy="noload",
         doc="User who owns this watchlist item"
     )
     

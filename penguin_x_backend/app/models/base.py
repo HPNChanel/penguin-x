@@ -131,14 +131,8 @@ class VersionMixin:
         self.version += 1
 
 
-# Import all models for Alembic metadata discovery
-from app.db.base_class import Base
-from app.models.user import User
-from app.models.academy import Course, Lesson, Enrollment
-from app.models.finance import Transaction, Budget
-from app.models.invest import Investment, Watchlist
-
-# Export all models and base classes
+# Export base classes and mixins only
+# Model imports are handled in app.models.__init__.py to prevent circular imports
 __all__ = [
     # Base classes and mixins
     "Base",
@@ -146,17 +140,5 @@ __all__ = [
     "BaseModel",
     "SoftDeleteMixin",
     "AuditMixin",
-    "VersionMixin",
-    # User model
-    "User",
-    # Academy models
-    "Course",
-    "Lesson", 
-    "Enrollment",
-    # Finance models
-    "Transaction",
-    "Budget",
-    # Investment models
-    "Investment",
-    "Watchlist"
+    "VersionMixin"
 ]

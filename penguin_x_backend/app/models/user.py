@@ -85,50 +85,8 @@ class User(Base):
         doc="Timestamp when the user was created"
     )
     
-    # Relationships (reverse relationships to academy models)
-    created_courses: Mapped[List["Course"]] = relationship(
-        "Course",
-        foreign_keys="Course.created_by",
-        back_populates="creator",
-        doc="Courses created by this user"
-    )
-    
-    enrollments: Mapped[List["Enrollment"]] = relationship(
-        "Enrollment",
-        foreign_keys="Enrollment.user_id",
-        back_populates="user",
-        doc="Course enrollments for this user"
-    )
-    
-    # Finance relationships
-    transactions: Mapped[List["Transaction"]] = relationship(
-        "Transaction",
-        foreign_keys="Transaction.user_id",
-        back_populates="user",
-        doc="Financial transactions for this user"
-    )
-    
-    budgets: Mapped[List["Budget"]] = relationship(
-        "Budget",
-        foreign_keys="Budget.user_id",
-        back_populates="user",
-        doc="Budget records for this user"
-    )
-    
-    # Investment relationships
-    investments: Mapped[List["Investment"]] = relationship(
-        "Investment",
-        foreign_keys="Investment.user_id",
-        back_populates="user",
-        doc="Investment portfolio for this user"
-    )
-    
-    watchlists: Mapped[List["Watchlist"]] = relationship(
-        "Watchlist",
-        foreign_keys="Watchlist.user_id",
-        back_populates="user",
-        doc="Watchlist items for this user"
-    )
+    # Note: Bidirectional relationships removed to prevent circular references
+    # Use explicit queries in services when reverse relationships are needed
     
     def __repr__(self) -> str:
         return f"<User(id='{self.id}', email='{self.email}')>"

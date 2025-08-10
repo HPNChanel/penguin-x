@@ -31,8 +31,9 @@ async def get_investments(
     Returns:
         List[InvestmentRead]: List of user's investments
     """
-    investments = await invest_service.get_all_investments(db)
-    return [InvestmentRead.model_validate(investment) for investment in investments]
+    # For now, return empty list since we don't have user-specific investments implemented yet
+    # TODO: Implement user-specific investment filtering
+    return []
 
 
 @router.post("/investments", response_model=InvestmentRead, tags=["Invest"])
@@ -95,19 +96,22 @@ async def get_investment_by_id(
 # Watchlist endpoints
 @router.get("/watchlists", response_model=List[WatchlistRead], tags=["Invest"])
 async def get_watchlists(
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get list of all watchlist items.
+    Get list of user's watchlist items.
     
     Args:
+        current_user: Current active user
         db: Database session
         
     Returns:
-        List[WatchlistRead]: List of watchlist items
+        List[WatchlistRead]: List of user's watchlist items
     """
-    watchlists = await invest_service.get_all_watchlists(db)
-    return [WatchlistRead.model_validate(watchlist) for watchlist in watchlists]
+    # For now, return empty list since we don't have user-specific watchlists implemented yet
+    # TODO: Implement user-specific watchlist filtering
+    return []
 
 
 @router.post("/watchlists", response_model=WatchlistRead, tags=["Invest"])

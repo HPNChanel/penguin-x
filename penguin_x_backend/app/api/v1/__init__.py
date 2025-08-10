@@ -5,6 +5,7 @@ from .auth import router as auth_router
 from .academy import router as academy_router
 from .finance import router as finance_router
 from .invest import router as invest_router
+from .smart_forms import router as smart_forms_router
 
 # Create main API router for v1
 api_router = APIRouter()
@@ -42,4 +43,11 @@ api_router.include_router(
     invest_router,
     prefix="/invest",
     tags=["investment"]
+)
+
+# Include smart forms routes
+api_router.include_router(
+    smart_forms_router,
+    prefix="/smart-forms",
+    tags=["smart-forms"]
 )

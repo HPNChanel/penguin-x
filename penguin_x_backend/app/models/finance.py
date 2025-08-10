@@ -84,10 +84,11 @@ class Transaction(Base):
         doc="Transaction description"
     )
     
-    # Relationships
+    # Relationships - one-way to prevent circular references
     user: Mapped["User"] = relationship(
         "User",
         foreign_keys=[user_id],
+        lazy="noload",
         doc="User who owns this transaction"
     )
     
@@ -154,10 +155,11 @@ class Budget(Base):
         doc="Budget notes"
     )
     
-    # Relationships
+    # Relationships - one-way to prevent circular references
     user: Mapped["User"] = relationship(
         "User",
         foreign_keys=[user_id],
+        lazy="noload",
         doc="User who owns this budget"
     )
     
